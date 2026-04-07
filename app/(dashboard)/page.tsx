@@ -48,7 +48,22 @@ export default function DashboardPage() {
 
     // Load stores for selector
     const storesRes = await supabase.from("stores").select("id, name").order("name");
-    setStores(storesRes.data ?? []);
+    const storesList = storesRes.data ?? [];
+
+    // Auto-seed if database is empty
+    if (storesList.length === 0 && !seedDone) {
+      setSeeding(true);
+      const res = await fetch("/api/seed", { method: "POST" });
+      setSeeding(false);
+      if (res.ok) {
+        setSeedDone(true);
+        // Re-run loadData now that we have data
+        loadData(storeId);
+        return;
+      }
+    }
+
+    setStores(storesList);
 
     // Sales query with optional store filter
     let salesQuery = supabase.from("sales").select("total_price, sale_date, store_id");
