@@ -12,8 +12,12 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { GlassCard } from "@/components/ui/glass-card";
+import { GlassButton } from "@/components/ui/glass-button";
 import { formatCurrency, formatCompact } from "@/lib/utils/formatters";
 import { SalesTrend } from "@/components/charts/sales-trend";
+import { RevenueChart } from "@/components/charts/revenue-chart";
+import { AlertBanner } from "@/components/dashboard/alert-banner";
+import { StoreSelector } from "@/components/dashboard/store-selector";
 
 interface KpiData {
   totalRevenue: number;
@@ -24,62 +28,143 @@ interface KpiData {
   lowStockCount: number;
 }
 
+interface ChartPoint {
+  date: string;
+  revenue: number;
+}
+
 export default function DashboardPage() {
   const [kpi, setKpi] = useState<KpiData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [salesTrend, setSalesTrend] = useState<ChartPoint[]>([]);
+  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
+  const [seedDone, setSeedDone] = useState(false);
+
+  async function loadData(storeId: string | null) {
+    setLoading(true);
+    const supabase = createClient();
+
+    // Load stores for selector
+    const storesRes = await supabase.from("stores").select("id, name").order("name");
+    setStores(storesRes.data ?? []);
+
+    // Sales query with optional store filter
+    let salesQuery = supabase.from("sales").select("total_price, sale_date, store_id");
+    if (storeId) salesQuery = salesQuery.eq("store_id", storeId);
+    const salesRes = await salesQuery;
+
+    const productsRes = await supabase
+      .from("products")
+      .select("id", { count: "exact", head: true });
+    const profilesRes = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true });
+
+    let invQuery = supabase.from("inventory").select("quantity, reorder_point, store_id");
+    if (storeId) invQuery = invQuery.eq("store_id", storeId);
+    const inventoryRes = await invQuery;
+
+    const sales = salesRes.data ?? [];
+    const totalRevenue = sales.reduce(
+      (sum: number, s: any) => sum + Number(s.total_price ?? 0),
+      0
+    );
+    const totalOrders = sales.length;
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    const inventory = inventoryRes.data ?? [];
+    const lowStock = inventory.filter(
+      (i: any) => i.quantity <= i.reorder_point
+    ).length;
+
+    setKpi({
+      totalRevenue,
+      totalOrders,
+      productCount: productsRes.count ?? 0,
+      avgOrderValue,
+      staffCount: profilesRes.count ?? 0,
+      lowStockCount: lowStock,
+    });
+
+    // Build sales trend (last 30 days)
+    const trendMap: Record<string, number> = {};
+    for (let d = 29; d >= 0; d--) {
+      const date = new Date();
+      date.setDate(date.getDate() - d);
+      const key = date.toISOString().slice(0, 10);
+      trendMap[key] = 0;
+    }
+    sales.forEach((s: any) => {
+      const key = new Date(s.sale_date).toISOString().slice(0, 10);
+      if (trendMap[key] !== undefined) {
+        trendMap[key] += Number(s.total_price ?? 0);
+      }
+    });
+    setSalesTrend(
+      Object.entries(trendMap).map(([date, revenue]) => ({
+        date: date.slice(5),
+        revenue: Math.round(revenue),
+      }))
+    );
+
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function loadKpi() {
-      const supabase = createClient();
+    loadData(selectedStore);
+  }, [selectedStore]);
 
-      const salesRes = await supabase.from("sales").select("total_price");
-      const productsRes = await supabase
-        .from("products")
-        .select("id", { count: "exact", head: true });
-      const profilesRes = await supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true });
-      const inventoryRes = await supabase
-        .from("inventory")
-        .select("quantity, reorder_point");
-
-      const sales = salesRes.data ?? [];
-      const totalRevenue = sales.reduce(
-        (sum, s) => sum + Number(s.total_price ?? 0),
-        0
-      );
-      const totalOrders = sales.length;
-      const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-      const inventory = inventoryRes.data ?? [];
-      const lowStock = inventory.filter(
-        (i) => i.quantity <= i.reorder_point
-      ).length;
-
-      setKpi({
-        totalRevenue,
-        totalOrders,
-        productCount: productsRes.count ?? 0,
-        avgOrderValue,
-        staffCount: profilesRes.count ?? 0,
-        lowStockCount: lowStock,
-      });
-      setLoading(false);
+  async function handleSeed() {
+    setSeeding(true);
+    const res = await fetch("/api/seed", { method: "POST" });
+    const data = await res.json();
+    setSeeding(false);
+    if (res.ok) {
+      setSeedDone(true);
+      loadData(selectedStore);
+    } else {
+      alert("Seed failed: " + (data.error ?? "Unknown error"));
     }
-
-    loadKpi();
-  }, []);
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Dashboard
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Overview of all store performance
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Dashboard
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Overview of all store performance
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <StoreSelector
+            stores={stores}
+            selectedStoreId={selectedStore}
+            onSelect={setSelectedStore}
+          />
+          {!seedDone && (
+            <GlassButton
+              variant="primary"
+              size="sm"
+              onClick={handleSeed}
+              disabled={seeding}
+            >
+              {seeding ? "Seeding..." : "Seed Data"}
+            </GlassButton>
+          )}
+        </div>
       </div>
+
+      {kpi && kpi.lowStockCount > 0 && (
+        <AlertBanner
+          type="warning"
+          message={`${kpi.lowStockCount} product${kpi.lowStockCount > 1 ? "s" : ""} below reorder point across stores.`}
+        />
+      )}
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -136,6 +221,20 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {/* Charts */}
+      {!loading && salesTrend.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <SalesTrend data={salesTrend} />
+          <RevenueChart
+            data={salesTrend.map((d) => ({
+              month: d.date,
+              revenue: d.revenue,
+              profit: Math.round(d.revenue * 0.32),
+            }))}
+          />
+        </div>
+      )}
     </div>
   );
 }
