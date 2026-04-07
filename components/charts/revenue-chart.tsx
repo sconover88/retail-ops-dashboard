@@ -30,7 +30,7 @@ export function RevenueChart({ data, className }: RevenueChartProps) {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
               <Legend />
               <Area
                 type="monotone"
