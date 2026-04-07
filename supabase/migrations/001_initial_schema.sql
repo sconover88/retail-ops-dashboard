@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Stores table
 CREATE TABLE stores (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
+  name TEXT NOT NULL UNIQUE,
   address TEXT,
   manager_id UUID REFERENCES auth.users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -78,22 +78,11 @@ CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
 
--- RLS Policies: Stores (managers see all, assistants see assigned)
-CREATE POLICY "Managers can view all stores"
+-- RLS Policies: Stores (all authenticated users can read)
+CREATE POLICY "Authenticated users can view stores"
   ON stores FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'manager'
-    )
-  );
-
-CREATE POLICY "Assistants can view assigned stores"
-  ON stores FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM user_stores WHERE user_stores.user_id = auth.uid() AND user_stores.store_id = stores.id
-    )
-  );
+  TO authenticated
+  USING (true);
 
 -- RLS Policies: Products (all authenticated users can read)
 CREATE POLICY "Authenticated users can view products"

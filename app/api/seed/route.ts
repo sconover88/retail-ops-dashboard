@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 interface DummyProduct {
   id: number;
@@ -11,7 +12,20 @@ interface DummyProduct {
 }
 
 export async function POST() {
-  const supabase = await createClient();
+  // Use admin client (bypasses RLS) for seeding data
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return NextResponse.json(
+      { error: "Missing SUPABASE_SERVICE_ROLE_KEY in .env.local. Get it from your Supabase dashboard → Settings → API." },
+      { status: 500 }
+    );
+  }
+
+  // Get the calling user so we can promote them to manager
+  const userClient = await createClient();
+  const { data: { user } } = await userClient.auth.getUser();
 
   try {
     // 1. Seed stores
@@ -24,7 +38,7 @@ export async function POST() {
       { name: "Sunrise Center", address: "987 Sunrise Blvd, Miami, FL 33101" },
     ];
 
-    const { data: storeData, error: storeError } = await supabase
+    const { data: storeData, error: storeError } = await admin
       .from("stores")
       .upsert(stores, { onConflict: "name" })
       .select();
@@ -33,7 +47,24 @@ export async function POST() {
       return NextResponse.json({ error: `Stores: ${storeError.message}` }, { status: 500 });
     }
 
-    // 2. Fetch products from DummyJSON
+    // 2. Promote calling user to manager and assign all stores
+    if (user) {
+      await admin
+        .from("profiles")
+        .upsert({ id: user.id, role: "manager", full_name: user.user_metadata?.full_name ?? "" }, { onConflict: "id" });
+
+      if (storeData) {
+        const assignments = storeData.map((store) => ({
+          user_id: user.id,
+          store_id: store.id,
+        }));
+        await admin
+          .from("user_stores")
+          .upsert(assignments, { onConflict: "user_id,store_id" });
+      }
+    }
+
+    // 3. Fetch products from DummyJSON
     const res = await fetch("https://dummyjson.com/products?limit=50");
     const json = await res.json();
     const dummyProducts: DummyProduct[] = json.products;
@@ -47,7 +78,7 @@ export async function POST() {
       description: p.description,
     }));
 
-    const { data: productData, error: productError } = await supabase
+    const { data: productData, error: productError } = await admin
       .from("products")
       .upsert(products, { onConflict: "sku" })
       .select();
@@ -56,7 +87,7 @@ export async function POST() {
       return NextResponse.json({ error: `Products: ${productError.message}` }, { status: 500 });
     }
 
-    // 3. Seed inventory (random quantities for each store/product combo)
+    // 4. Seed inventory (random quantities for each store/product combo)
     if (storeData && productData) {
       const inventoryRows = storeData.flatMap((store) =>
         productData.map((product) => ({
@@ -67,7 +98,7 @@ export async function POST() {
         }))
       );
 
-      const { error: invError } = await supabase
+      const { error: invError } = await admin
         .from("inventory")
         .upsert(inventoryRows, { onConflict: "store_id,product_id" });
 
@@ -75,7 +106,7 @@ export async function POST() {
         return NextResponse.json({ error: `Inventory: ${invError.message}` }, { status: 500 });
       }
 
-      // 4. Seed sample sales data (last 90 days)
+      // 5. Seed sample sales data (last 90 days)
       const salesRows: {
         store_id: string;
         product_id: string;
@@ -114,7 +145,7 @@ export async function POST() {
       // Insert sales in batches of 500
       for (let i = 0; i < salesRows.length; i += 500) {
         const batch = salesRows.slice(i, i + 500);
-        const { error: salesError } = await supabase
+        const { error: salesError } = await admin
           .from("sales")
           .insert(batch);
 
