@@ -36,12 +36,12 @@ export default function InventoryPage() {
   const [editQty, setEditQty] = useState("");
   const [editReorder, setEditReorder] = useState("");
   const [saving, setSaving] = useState(false);
-  const [sortKey, setSortKey] = useState<keyof InventoryRow | null>(null);
+  const [sortKey, setSortKey] = useState<keyof InventoryRow | "_status" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
-  function handleSort(key: keyof InventoryRow) {
+  function handleSort(key: keyof InventoryRow | "_status") {
     if (sortKey === key) {
       setSortDir(sortDir === "asc" ? "desc" : "asc");
     } else {
@@ -50,7 +50,7 @@ export default function InventoryPage() {
     }
   }
 
-  function SortIcon({ column }: { column: keyof InventoryRow }) {
+  function SortIcon({ column }: { column: keyof InventoryRow | "_status" }) {
     if (sortKey !== column) return <ChevronsUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
     return sortDir === "asc"
       ? <ChevronUp className="inline h-3.5 w-3.5 ml-1" />
@@ -113,6 +113,11 @@ export default function InventoryPage() {
 
   const sorted = [...filtered].sort((a, b) => {
     if (!sortKey) return 0;
+    if (sortKey === "_status") {
+      const rank = (i: InventoryRow) => i.quantity === 0 ? 0 : i.quantity <= i.reorder_point ? 1 : 2;
+      const diff = rank(a) - rank(b);
+      return sortDir === "asc" ? diff : -diff;
+    }
     const aVal = a[sortKey];
     const bVal = b[sortKey];
     if (typeof aVal === "number" && typeof bVal === "number") {
@@ -253,7 +258,7 @@ export default function InventoryPage() {
                   <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("store_name")}>Store<SortIcon column="store_name" /></th>
                   <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("quantity")}>Qty<SortIcon column="quantity" /></th>
                   <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("reorder_point")}>Reorder Pt<SortIcon column="reorder_point" /></th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Status</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("_status")}>Status<SortIcon column="_status" /></th>
                   <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
