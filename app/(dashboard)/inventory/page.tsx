@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, AlertTriangle, Package, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Search, AlertTriangle, Package, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -38,6 +38,8 @@ export default function InventoryPage() {
   const [saving, setSaving] = useState(false);
   const [sortKey, setSortKey] = useState<keyof InventoryRow | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
   function handleSort(key: keyof InventoryRow) {
     if (sortKey === key) {
@@ -90,6 +92,10 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchInventory();
   }, [fetchInventory]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, filter, selectedStore, sortKey, sortDir]);
 
   const filtered = inventory.filter((item) => {
     if (filter === "low" && item.quantity > item.reorder_point) return false;
@@ -252,7 +258,7 @@ export default function InventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {sorted.slice(0, 100).map((item) => {
+                {sorted.slice((page - 1) * pageSize, page * pageSize).map((item) => {
                   const status = getStatus(item.quantity, item.reorder_point);
                   const StatusIcon = status.icon;
                   return (
@@ -289,8 +295,45 @@ export default function InventoryPage() {
             {filtered.length === 0 && (
               <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">No inventory items found.</div>
             )}
-            {filtered.length > 100 && (
-              <div className="py-3 text-center text-xs text-gray-400">Showing first 100 of {filtered.length} results</div>
+            {sorted.length > 0 && (
+              <div className="flex items-center justify-between border-t border-white/10 dark:border-gray-700/20 px-4 py-3">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Showing {Math.min((page - 1) * pageSize + 1, sorted.length)}–{Math.min(page * pageSize, sorted.length)} of {sorted.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage(1)}
+                    disabled={page === 1}
+                    className="rounded-md px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-white/10 dark:hover:bg-gray-800/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setPage(page - 1)}
+                    disabled={page === 1}
+                    className="rounded-md p-1 text-gray-600 dark:text-gray-400 hover:bg-white/10 dark:hover:bg-gray-800/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="px-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                    Page {page} of {Math.ceil(sorted.length / pageSize)}
+                  </span>
+                  <button
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= Math.ceil(sorted.length / pageSize)}
+                    className="rounded-md p-1 text-gray-600 dark:text-gray-400 hover:bg-white/10 dark:hover:bg-gray-800/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setPage(Math.ceil(sorted.length / pageSize))}
+                    disabled={page >= Math.ceil(sorted.length / pageSize)}
+                    className="rounded-md px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-white/10 dark:hover:bg-gray-800/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Last
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </GlassCard>
