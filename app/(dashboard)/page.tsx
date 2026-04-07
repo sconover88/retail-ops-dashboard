@@ -161,16 +161,6 @@ export default function DashboardPage() {
             selectedStoreId={selectedStore}
             onSelect={setSelectedStore}
           />
-          {!seedDone && (
-            <GlassButton
-              variant="primary"
-              size="sm"
-              onClick={handleSeed}
-              disabled={seeding}
-            >
-              {seeding ? "Seeding..." : "Seed Data"}
-            </GlassButton>
-          )}
         </div>
       </div>
 

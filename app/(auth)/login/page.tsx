@@ -39,8 +39,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
       <GlassCard className="w-full max-w-md p-8" variant="solid">
         <div className="mb-8 text-center">
+          <img src="/logo.svg" alt="" className="mx-auto h-10 w-10 mb-2 dark:invert" aria-hidden="true" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            RetailOps Dashboard
+            Vault &amp; Vine
           </h1>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             Sign in to manage your stores

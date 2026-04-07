@@ -55,7 +55,7 @@ export default function RegisterPage() {
             Create Account
           </h1>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Join RetailOps to manage your stores
+            Join Vault &amp; Vine to manage your stores
           </p>
         </div>
 

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RetailOps Dashboard",
+  title: "Vault & Vine Dashboard",
   description: "Modern retail operations dashboard for regional and district managers",
 };
 

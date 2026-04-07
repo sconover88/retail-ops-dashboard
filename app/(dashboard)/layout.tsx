@@ -67,8 +67,9 @@ export default function DashboardLayout({
         aria-label="Sidebar"
       >
         <div className="flex h-16 items-center justify-between px-6 border-b border-white/20 dark:border-gray-700/20">
-          <Link href="/" className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            RetailOps
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-gray-100">
+            <img src="/logo.svg" alt="" className="h-6 w-6 dark:invert" aria-hidden="true" />
+            Vault &amp; Vine
           </Link>
           <button
             className="lg:hidden p-1 rounded-md hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
