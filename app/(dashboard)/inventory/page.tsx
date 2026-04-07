@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Search, AlertTriangle, Package, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
+import { Search, AlertTriangle, Package, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, Filter, X, MoreHorizontal, Truck, Pencil, ShoppingCart } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { createClient } from "@/lib/supabase/client";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -24,6 +25,8 @@ interface InventoryRow {
   product_name: string;
   product_sku: string;
   product_category: string;
+  arriving_qty: number | null;
+  arriving_date: string | null;
 }
 
 export default function InventoryPage() {
@@ -47,6 +50,9 @@ function InventoryContent() {
   const [editQty, setEditQty] = useState("");
   const [editReorder, setEditReorder] = useState("");
   const [saving, setSaving] = useState(false);
+  const [orderItem, setOrderItem] = useState<InventoryRow | null>(null);
+  const [orderQty, setOrderQty] = useState("");
+  const [ordering, setOrdering] = useState(false);
   const [sortKey, setSortKey] = useState<keyof InventoryRow | "_status" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
@@ -96,6 +102,8 @@ function InventoryContent() {
         product_name: prod.name,
         product_sku: prod.sku,
         product_category: prod.category ?? "",
+        arriving_qty: row.arriving_qty ?? null,
+        arriving_date: row.arriving_date ?? null,
       };
     });
 
@@ -112,6 +120,7 @@ function InventoryContent() {
   }, [search, filter, selectedStore, sortKey, sortDir, productFilter, storeFilter, statusFilter]);
 
   function getStatusLabel(item: InventoryRow) {
+    if (item.arriving_qty && item.arriving_qty > 0) return "Arriving";
     if (item.quantity === 0) return "Out of Stock";
     if (item.quantity <= item.reorder_point) return "Low Stock";
     return "In Stock";
@@ -119,7 +128,7 @@ function InventoryContent() {
 
   const uniqueProducts = [...new Set(inventory.map((i) => i.product_name))].sort();
   const uniqueStores = [...new Set(inventory.map((i) => i.store_name))].sort();
-  const uniqueStatuses = ["In Stock", "Low Stock", "Out of Stock"];
+  const uniqueStatuses = ["In Stock", "Low Stock", "Out of Stock", "Arriving"];
 
   const filtered = inventory.filter((item) => {
     if (filter === "low" && item.quantity > item.reorder_point) return false;
@@ -141,7 +150,10 @@ function InventoryContent() {
   const sorted = [...filtered].sort((a, b) => {
     if (!sortKey) return 0;
     if (sortKey === "_status") {
-      const rank = (i: InventoryRow) => i.quantity === 0 ? 0 : i.quantity <= i.reorder_point ? 1 : 2;
+      const rank = (i: InventoryRow) => {
+        if (i.arriving_qty && i.arriving_qty > 0) return 3;
+        return i.quantity === 0 ? 0 : i.quantity <= i.reorder_point ? 1 : 2;
+      };
       const diff = rank(a) - rank(b);
       return sortDir === "asc" ? diff : -diff;
     }
@@ -179,20 +191,43 @@ function InventoryContent() {
   async function handleSave() {
     if (!editingItem) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase
-      .from("inventory")
-      .update({
+    await fetch("/api/inventory", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editingItem.id,
         quantity: parseInt(editQty),
         reorder_point: parseInt(editReorder),
-      })
-      .eq("id", editingItem.id);
+      }),
+    });
     setSaving(false);
     setEditingItem(null);
     fetchInventory();
   }
 
-  function getStatus(qty: number, reorder: number) {
+  async function handleOrder() {
+    if (!orderItem) return;
+    setOrdering(true);
+    const arrivalDate = new Date();
+    arrivalDate.setDate(arrivalDate.getDate() + Math.floor(Math.random() * 5) + 3);
+    const dateStr = arrivalDate.toISOString().split("T")[0];
+    await fetch("/api/inventory", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: orderItem.id,
+        arriving_qty: parseInt(orderQty),
+        arriving_date: dateStr,
+      }),
+    });
+    setOrdering(false);
+    setOrderItem(null);
+    setOrderQty("");
+    fetchInventory();
+  }
+
+  function getStatus(qty: number, reorder: number, arrivingQty?: number | null, arrivingDate?: string | null) {
+    if (arrivingQty && arrivingQty > 0) return { label: "Arriving", color: "text-blue-600 dark:text-blue-400 bg-blue-500/10", icon: Truck, arrivingDate };
     if (qty === 0) return { label: "Out of Stock", color: "text-red-600 dark:text-red-400 bg-red-500/10", icon: AlertTriangle };
     if (qty <= reorder) return { label: "Low Stock", color: "text-amber-600 dark:text-amber-400 bg-amber-500/10", icon: AlertTriangle };
     return { label: "In Stock", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10", icon: CheckCircle };
@@ -374,8 +409,10 @@ function InventoryContent() {
               </thead>
               <tbody>
                 {sorted.slice((page - 1) * pageSize, page * pageSize).map((item) => {
-                  const status = getStatus(item.quantity, item.reorder_point);
+                  const status = getStatus(item.quantity, item.reorder_point, item.arriving_qty, item.arriving_date);
                   const StatusIcon = status.icon;
+                  const isLowOrOut = item.quantity === 0 || item.quantity <= item.reorder_point;
+                  const isArriving = item.arriving_qty != null && item.arriving_qty > 0;
                   return (
                     <tr key={item.id} className="border-b border-white/5 dark:border-gray-800/10 hover:bg-white/5 dark:hover:bg-gray-800/10 transition-colors">
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 max-w-[200px] truncate">{item.product_name}</td>
@@ -388,19 +425,52 @@ function InventoryContent() {
                           <StatusIcon className="h-3 w-3" />
                           {status.label}
                         </span>
+                        {isArriving && item.arriving_date && (
+                          <span className="ml-1.5 text-[10px] text-blue-500 dark:text-blue-400">
+                            {new Date(item.arriving_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            {" · "}+{item.arriving_qty}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <GlassButton
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditingItem(item);
-                            setEditQty(String(item.quantity));
-                            setEditReorder(String(item.reorder_point));
-                          }}
-                        >
-                          Edit
-                        </GlassButton>
+                        <DropdownMenu.Root>
+                          <DropdownMenu.Trigger asChild>
+                            <button className="inline-flex items-center justify-center rounded-md p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/10 dark:hover:bg-gray-800/20 transition-colors focus:outline-none">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </button>
+                          </DropdownMenu.Trigger>
+                          <DropdownMenu.Portal>
+                            <DropdownMenu.Content
+                              align="end"
+                              sideOffset={4}
+                              className="z-50 min-w-[160px] rounded-lg border border-white/20 dark:border-gray-700/30 bg-white dark:bg-gray-900 p-1 shadow-xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95"
+                            >
+                              <DropdownMenu.Item
+                                className="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors outline-none"
+                                onSelect={() => {
+                                  setEditingItem(item);
+                                  setEditQty(String(item.quantity));
+                                  setEditReorder(String(item.reorder_point));
+                                }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                              </DropdownMenu.Item>
+                              {(isLowOrOut && !isArriving) && (
+                                <DropdownMenu.Item
+                                  className="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors outline-none"
+                                  onSelect={() => {
+                                    setOrderItem(item);
+                                    setOrderQty(String(Math.max(item.reorder_point * 2 - item.quantity, 10)));
+                                  }}
+                                >
+                                  <ShoppingCart className="h-3.5 w-3.5" />
+                                  Order More
+                                </DropdownMenu.Item>
+                              )}
+                            </DropdownMenu.Content>
+                          </DropdownMenu.Portal>
+                        </DropdownMenu.Root>
                       </td>
                     </tr>
                   );
@@ -467,6 +537,33 @@ function InventoryContent() {
           <div className="flex justify-end gap-3 pt-2">
             <GlassButton variant="ghost" onClick={() => setEditingItem(null)}>Cancel</GlassButton>
             <GlassButton variant="primary" onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</GlassButton>
+          </div>
+        </div>
+      </GlassModal>
+
+      {/* Order More Modal */}
+      <GlassModal
+        open={!!orderItem}
+        onOpenChange={(open) => { if (!open) { setOrderItem(null); setOrderQty(""); } }}
+        title="Order More Stock"
+        description={orderItem ? `${orderItem.product_name} at ${orderItem.store_name}` : ""}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30 p-3">
+            <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+              <Truck className="h-4 w-4" />
+              <span>Current stock: <strong>{orderItem?.quantity ?? 0}</strong> &middot; Reorder point: <strong>{orderItem?.reorder_point ?? 0}</strong></span>
+            </div>
+          </div>
+          <GlassInput id="order-qty" label="Order Quantity" type="number" min="1" value={orderQty} onChange={(e) => setOrderQty(e.target.value)} />
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Estimated arrival: 3–7 business days. The item status will change to &quot;Arriving&quot; with the expected date.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <GlassButton variant="ghost" onClick={() => { setOrderItem(null); setOrderQty(""); }}>Cancel</GlassButton>
+            <GlassButton variant="primary" onClick={handleOrder} disabled={ordering || !orderQty || parseInt(orderQty) < 1}>
+              {ordering ? "Placing Order..." : "Place Order"}
+            </GlassButton>
           </div>
         </div>
       </GlassModal>
