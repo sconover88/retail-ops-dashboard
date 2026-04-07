@@ -14,7 +14,7 @@ A modern, glassmorphic retail operations dashboard for regional/district manager
 
 - **Multi-Store Dashboard** — KPI cards, sales trend charts, revenue/profit visualization, store selector
 - **Product Management** — Full CRUD, search/filter by name and category, image display, detail pages
-- **Inventory Tracking** — Status badges (in-stock/low/out), table with search, inline quantity editing, turnover chart
+- **Inventory Tracking** — Status badges (in-stock/low/out/arriving), contextual actions menu, order more stock, turnover chart
 - **Financial Analytics** — Revenue by store, weekly/monthly trends, profit margins, gross profit breakdown
 - **Team Management** — Role-based access (manager/assistant), store assignments, member editing
 - **Settings** — Profile management, light/dark/system theme toggle, keyboard shortcuts
@@ -114,6 +114,29 @@ retail-ops-dashboard/
 - Role-based access (Manager vs Assistant)
 - Protected routes with middleware
 - Session persistence
+
+### Inventory Management
+
+The inventory table displays all products across stores with sortable columns, searchable multi-select filters, and pagination.
+
+**Statuses:**
+| Status | Meaning |
+|--------|---------|
+| **In Stock** (green) | Quantity is above the reorder point |
+| **Low Stock** (amber) | Quantity is at or below the reorder point |
+| **Out of Stock** (red) | Quantity is zero |
+| **Arriving** (blue) | An order has been placed — shows the expected arrival date and incoming quantity |
+
+**Ordering more product:**
+1. Find a **Low Stock** or **Out of Stock** item in the inventory table.
+2. Click the **⋯** menu in the **Actions** column.
+3. Select **Order More**.
+4. Enter the quantity you'd like to order and click **Place Order**.
+5. The item's status will change to **Arriving** with an estimated delivery date (3–7 business days).
+
+**Editing inventory:**
+1. Click the **⋯** menu on any row.
+2. Select **Edit** to update the current quantity or reorder point.
 
 ### Data Management
 - Real-time updates via Supabase subscriptions
