@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { UserPlus, Shield, ShieldCheck, Store, Trash2, Search } from "lucide-react";
+import { UserPlus, Users, Shield, ShieldCheck, Store, Trash2, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -26,6 +26,7 @@ export default function TeamPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "manager" | "assistant">("all");
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState("");
   const [editStores, setEditStores] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -84,7 +85,7 @@ export default function TeamPage() {
 
     await supabase
       .from("profiles")
-      .update({ role: editRole })
+      .update({ role: editRole, full_name: editName })
       .eq("id", editingMember.id);
 
     // Update store assignments
@@ -112,6 +113,7 @@ export default function TeamPage() {
 
   function openEdit(member: TeamMember) {
     setEditingMember(member);
+    setEditName(member.full_name ?? "");
     setEditRole(member.role);
     // Get store IDs for this member
     const supabase = createClient();
@@ -138,19 +140,32 @@ export default function TeamPage() {
 
       {/* Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <GlassCard className="p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{members.length}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Total Members</p>
+        <GlassCard className="flex items-center gap-4 p-5 cursor-pointer" onClick={() => setRoleFilter("all")}>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-500/10">
+            <Users className="h-6 w-6 text-sky-500" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{members.length}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Total Members</p>
+          </div>
         </GlassCard>
-        <GlassCard className="p-4 text-center cursor-pointer" onClick={() => setRoleFilter("manager")}>
-          <ShieldCheck className="mx-auto h-5 w-5 text-purple-500" />
-          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{managerCount}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Managers</p>
+        <GlassCard className="flex items-center gap-4 p-5 cursor-pointer" onClick={() => setRoleFilter("manager")}>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-500/10">
+            <ShieldCheck className="h-6 w-6 text-purple-500" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{managerCount}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Managers</p>
+          </div>
         </GlassCard>
-        <GlassCard className="p-4 text-center cursor-pointer" onClick={() => setRoleFilter("assistant")}>
-          <Shield className="mx-auto h-5 w-5 text-sky-500" />
-          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{assistantCount}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Assistants</p>
+        <GlassCard className="flex items-center gap-4 p-5 cursor-pointer" onClick={() => setRoleFilter("assistant")}>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
+            <Shield className="h-6 w-6 text-emerald-500" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{assistantCount}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Assistants</p>
+          </div>
         </GlassCard>
       </div>
 
@@ -265,6 +280,14 @@ export default function TeamPage() {
         description={editingMember?.full_name ?? ""}
       >
         <div className="flex flex-col gap-4">
+          <GlassInput
+            id="edit-name"
+            label="Full Name"
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            placeholder="Enter full name"
+          />
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
             <div className="flex gap-2">

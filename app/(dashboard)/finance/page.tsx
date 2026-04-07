@@ -49,24 +49,23 @@ export default function FinancePage() {
       setTotalCost(cost);
       setOrderCount(sales.length);
 
-      // Weekly trend (last 12 weeks) — labeled by month
-      const weekMap: Record<string, number> = {};
+      // Monthly trend (last 12 months)
       const monthAbbr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      for (let w = 11; w >= 0; w--) {
+      const trendMap: Record<string, number> = {};
+      const trendKeys: string[] = [];
+      for (let m = 11; m >= 0; m--) {
         const d = new Date();
-        d.setDate(d.getDate() - w * 7);
-        const key = `${monthAbbr[d.getMonth()]} ${d.getDate()}`;
-        weekMap[key] = 0;
+        d.setMonth(d.getMonth() - m);
+        const key = monthAbbr[d.getMonth()];
+        trendMap[key] = 0;
+        trendKeys.push(key);
       }
       sales.forEach((s: any) => {
         const d = new Date(s.sale_date);
-        const weeksAgo = Math.floor((Date.now() - d.getTime()) / (7 * 24 * 60 * 60 * 1000));
-        if (weeksAgo < 12) {
-          const label = `${monthAbbr[d.getMonth()]} ${new Date(Date.now() - weeksAgo * 7 * 24 * 60 * 60 * 1000).getDate()}`;
-          if (weekMap[label] !== undefined) weekMap[label] += Number(s.total_price ?? 0);
-        }
+        const key = monthAbbr[d.getMonth()];
+        if (trendMap[key] !== undefined) trendMap[key] += Number(s.total_price ?? 0);
       });
-      setWeeklyData(Object.entries(weekMap).map(([date, revenue]) => ({ date, revenue: Math.round(revenue) })));
+      setWeeklyData(trendKeys.map((key) => ({ date: key, revenue: Math.round(trendMap[key]) })));
 
       // Monthly data (last 6 months)
       const mMap: Record<string, number> = {};
