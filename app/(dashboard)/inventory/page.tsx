@@ -155,10 +155,14 @@ export default function InventoryPage() {
     catMap[cat].stock += i.quantity;
   });
   const turnoverData = Object.entries(catMap)
-    .map(([category, v]) => ({
-      category: category.replace(/-/g, " ").slice(0, 12),
-      turnover: v.stock > 0 ? +(Math.random() * 8 + 2).toFixed(1) : 0,
-    }))
+    .map(([category, v]) => {
+      // Derive a stable pseudo-random value from the category name instead of Math.random()
+      const hash = category.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+      return {
+        category: category.replace(/-/g, " ").slice(0, 12),
+        turnover: v.stock > 0 ? +((hash % 80) / 10 + 2).toFixed(1) : 0,
+      };
+    })
     .slice(0, 8);
 
   async function handleSave() {
