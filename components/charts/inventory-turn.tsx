@@ -30,7 +30,7 @@ export function InventoryTurn({ data, className }: InventoryTurnProps) {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="category" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip cursor={false} />
+              <Tooltip cursor={false} contentStyle={{ backgroundColor: "rgba(30,30,30,0.9)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#f3f4f6" }} labelStyle={{ color: "#f3f4f6", fontWeight: 600 }} itemStyle={{ color: "#c4b5fd" }} />
               <Legend />
               <Bar dataKey="turnover" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
             </BarChart>
