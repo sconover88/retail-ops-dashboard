@@ -59,32 +59,44 @@ export interface Database {
         Row: Store;
         Insert: Omit<Store, "id" | "created_at">;
         Update: Partial<Omit<Store, "id" | "created_at">>;
+        Relationships: [];
       };
       products: {
         Row: Product;
         Insert: Omit<Product, "id" | "created_at">;
         Update: Partial<Omit<Product, "id" | "created_at">>;
+        Relationships: [];
       };
       inventory: {
         Row: Inventory;
         Insert: Omit<Inventory, "id" | "last_updated">;
         Update: Partial<Omit<Inventory, "id" | "last_updated">>;
+        Relationships: [];
       };
       sales: {
         Row: Sale;
         Insert: Omit<Sale, "id" | "sale_date">;
         Update: Partial<Omit<Sale, "id" | "sale_date">>;
+        Relationships: [];
       };
       profiles: {
         Row: Profile;
         Insert: Omit<Profile, "created_at">;
         Update: Partial<Omit<Profile, "id" | "created_at">>;
+        Relationships: [];
       };
       user_stores: {
         Row: UserStore;
         Insert: UserStore;
         Update: Partial<UserStore>;
+        Relationships: [];
       };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
     };
   };
 }
