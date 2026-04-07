@@ -81,22 +81,21 @@ export default function TeamPage() {
   async function handleSaveRole() {
     if (!editingMember) return;
     setSaving(true);
-    const supabase = createClient();
 
-    await supabase
-      .from("profiles")
-      .update({ role: editRole, full_name: editName })
-      .eq("id", editingMember.id);
+    const res = await fetch("/api/team", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        memberId: editingMember.id,
+        fullName: editName,
+        role: editRole,
+        storeIds: editStores,
+      }),
+    });
 
-    // Update store assignments
-    await supabase.from("user_stores").delete().eq("user_id", editingMember.id);
-    if (editStores.length > 0) {
-      await supabase.from("user_stores").insert(
-        editStores.map((store_id) => ({
-          user_id: editingMember.id,
-          store_id,
-        }))
-      );
+    if (!res.ok) {
+      const data = await res.json();
+      alert("Save failed: " + (data.error ?? "Unknown error"));
     }
 
     setSaving(false);
@@ -105,9 +104,17 @@ export default function TeamPage() {
   }
 
   async function handleRemoveMember(id: string) {
-    const supabase = createClient();
-    await supabase.from("user_stores").delete().eq("user_id", id);
-    await supabase.from("profiles").delete().eq("id", id);
+    const res = await fetch("/api/team", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId: id }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      alert("Remove failed: " + (data.error ?? "Unknown error"));
+    }
+
     fetchTeam();
   }
 
