@@ -22,7 +22,7 @@ const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
           ref={ref}
           id={id}
           className={cn(
-            "h-10 w-full rounded-lg border px-3 text-sm backdrop-blur-sm bg-white/20 border-white/30 placeholder:text-gray-400 dark:bg-gray-800/20 dark:border-gray-600/30 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
+            "h-10 w-full rounded-lg border px-3 text-sm backdrop-blur-sm bg-white/20 border-white/30 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:bg-gray-800/20 dark:border-gray-600/30 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
             error && "border-red-400 focus:ring-red-500",
             className
           )}
