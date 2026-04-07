@@ -31,6 +31,7 @@ interface KpiData {
 
 interface ChartPoint {
   date: string;
+  fullDate: string;
   revenue: number;
 }
 
@@ -105,24 +106,26 @@ export default function DashboardPage() {
       lowStockCount: lowStock,
     });
 
-    // Build sales trend (last 30 days)
-    const trendMap: Record<string, number> = {};
-    for (let d = 29; d >= 0; d--) {
+    // Build sales trend (last 7 days)
+    const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const trendMap: Record<string, { label: string; total: number }> = {};
+    for (let d = 6; d >= 0; d--) {
       const date = new Date();
       date.setDate(date.getDate() - d);
       const key = date.toISOString().slice(0, 10);
-      trendMap[key] = 0;
+      trendMap[key] = { label: dayLabels[date.getDay()], total: 0 };
     }
     sales.forEach((s: any) => {
       const key = new Date(s.sale_date).toISOString().slice(0, 10);
       if (trendMap[key] !== undefined) {
-        trendMap[key] += Number(s.total_price ?? 0);
+        trendMap[key].total += Number(s.total_price ?? 0);
       }
     });
     setSalesTrend(
-      Object.entries(trendMap).map(([date, revenue]) => ({
-        date: date.slice(5),
-        revenue: Math.round(revenue),
+      Object.entries(trendMap).map(([key, v]) => ({
+        date: v.label,
+        fullDate: new Date(key + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        revenue: Math.round(v.total),
       }))
     );
 
@@ -238,6 +241,7 @@ export default function DashboardPage() {
           <RevenueChart
             data={salesTrend.map((d) => ({
               month: d.date,
+              fullDate: d.fullDate,
               revenue: d.revenue,
               profit: Math.round(d.revenue * 0.32),
             }))}

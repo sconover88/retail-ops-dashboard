@@ -13,7 +13,7 @@ import {
 import { GlassCard } from "@/components/ui/glass-card";
 
 interface SalesTrendProps {
-  data: { date: string; revenue: number }[];
+  data: { date: string; fullDate?: string; revenue: number }[];
   className?: string;
 }
 
@@ -30,7 +30,16 @@ export function SalesTrend({ data, className }: SalesTrendProps) {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="date" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, "Revenue"]} />
+              <Tooltip
+                formatter={(value) => [`$${Number(value).toLocaleString()}`, "Revenue"]}
+                labelFormatter={(_label, payload) => {
+                  const item = payload?.[0]?.payload;
+                  return item?.fullDate ? `${_label} — ${item.fullDate}` : _label;
+                }}
+                contentStyle={{ backgroundColor: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.5rem", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}
+                labelStyle={{ color: "#94a3b8", fontWeight: 500 }}
+                itemStyle={{ color: "#e2e8f0" }}
+              />
               <Legend />
               <Line
                 type="monotone"
