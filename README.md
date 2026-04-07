@@ -2,11 +2,9 @@
 
 A modern, glassmorphic retail operations dashboard for regional/district managers overseeing multiple general merchandise stores. Built with Next.js, Supabase, Tailwind CSS, and Recharts.
 
-![RetailOps Dashboard](https://via.placeholder.com/1200x600/0ea5e9/ffffff?text=RetailOps+Dashboard)
-
 ## Live Demo
 
-[View Live Demo](https://your-vercel-url.vercel.app)
+[View Live Demo] https://retail-ops-dashboard-seven.vercel.app/
 
 **Demo Credentials:**
 - Manager: `manager@retailops.com` / `password123`
@@ -42,7 +40,7 @@ A modern, glassmorphic retail operations dashboard for regional/district manager
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/retail-ops-dashboard.git
+   git clone https://github.com/sconover88/retail-ops-dashboard
    cd retail-ops-dashboard
    ```
 
