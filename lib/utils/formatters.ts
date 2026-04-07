@@ -19,13 +19,6 @@ export function formatCompact(value: number): string {
 }
 
 /**
- * Format a number as a percentage
- */
-export function formatPercentage(value: number, decimals = 1): string {
-  return `${value.toFixed(decimals)}%`;
-}
-
-/**
  * Format a date string to locale format
  */
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
@@ -36,23 +29,4 @@ export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOpt
     day: "numeric",
     ...options,
   });
-}
-
-/**
- * Format a date relative to now (e.g., "2 hours ago")
- */
-export function formatRelativeTime(date: string | Date): string {
-  const d = typeof date === "string" ? new Date(date) : date;
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffSeconds = Math.floor(diffMs / 1000);
-
-  if (diffSeconds < 60) return "just now";
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return formatDate(d);
 }
