@@ -8,6 +8,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
 } from "recharts";
 import { GlassCard } from "@/components/ui/glass-card";
 
@@ -30,6 +31,7 @@ export function RevenueChart({ data, className }: RevenueChartProps) {
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
+              <Legend />
               <Area
                 type="monotone"
                 dataKey="revenue"

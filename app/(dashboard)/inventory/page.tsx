@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, AlertTriangle, Package, CheckCircle } from "lucide-react";
+import { Search, AlertTriangle, Package, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -36,6 +36,24 @@ export default function InventoryPage() {
   const [editQty, setEditQty] = useState("");
   const [editReorder, setEditReorder] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sortKey, setSortKey] = useState<keyof InventoryRow | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function handleSort(key: keyof InventoryRow) {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  function SortIcon({ column }: { column: keyof InventoryRow }) {
+    if (sortKey !== column) return <ChevronsUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc"
+      ? <ChevronUp className="inline h-3.5 w-3.5 ml-1" />
+      : <ChevronDown className="inline h-3.5 w-3.5 ml-1" />;
+  }
 
   const fetchInventory = useCallback(async () => {
     setLoading(true);
@@ -85,6 +103,18 @@ export default function InventoryPage() {
       );
     }
     return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (!sortKey) return 0;
+    const aVal = a[sortKey];
+    const bVal = b[sortKey];
+    if (typeof aVal === "number" && typeof bVal === "number") {
+      return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+    }
+    const aStr = String(aVal).toLowerCase();
+    const bStr = String(bVal).toLowerCase();
+    return sortDir === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
   });
 
   const lowStockCount = inventory.filter((i) => i.quantity > 0 && i.quantity <= i.reorder_point).length;
@@ -212,17 +242,17 @@ export default function InventoryPage() {
             <table className="w-full text-sm" role="table">
               <thead>
                 <tr className="border-b border-white/10 dark:border-gray-700/20">
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Product</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">SKU</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Store</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Qty</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Reorder Pt</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("product_name")}>Product<SortIcon column="product_name" /></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("product_sku")}>SKU<SortIcon column="product_sku" /></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("store_name")}>Store<SortIcon column="store_name" /></th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("quantity")}>Qty<SortIcon column="quantity" /></th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("reorder_point")}>Reorder Pt<SortIcon column="reorder_point" /></th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Status</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice(0, 100).map((item) => {
+                {sorted.slice(0, 100).map((item) => {
                   const status = getStatus(item.quantity, item.reorder_point);
                   const StatusIcon = status.icon;
                   return (

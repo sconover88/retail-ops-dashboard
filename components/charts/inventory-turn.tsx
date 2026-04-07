@@ -8,6 +8,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
 } from "recharts";
 import { GlassCard } from "@/components/ui/glass-card";
 
@@ -30,6 +31,7 @@ export function InventoryTurn({ data, className }: InventoryTurnProps) {
               <XAxis dataKey="category" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
+              <Legend />
               <Bar dataKey="turnover" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
