@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Search, AlertTriangle, Package, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Search, AlertTriangle, Package, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -40,6 +40,9 @@ export default function InventoryPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const pageSize = 25;
+  const [productFilter, setProductFilter] = useState<Set<string>>(new Set());
+  const [storeFilter, setStoreFilter] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
 
   function handleSort(key: keyof InventoryRow | "_status") {
     if (sortKey === key) {
@@ -95,11 +98,24 @@ export default function InventoryPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, filter, selectedStore, sortKey, sortDir]);
+  }, [search, filter, selectedStore, sortKey, sortDir, productFilter, storeFilter, statusFilter]);
+
+  function getStatusLabel(item: InventoryRow) {
+    if (item.quantity === 0) return "Out of Stock";
+    if (item.quantity <= item.reorder_point) return "Low Stock";
+    return "In Stock";
+  }
+
+  const uniqueProducts = [...new Set(inventory.map((i) => i.product_name))].sort();
+  const uniqueStores = [...new Set(inventory.map((i) => i.store_name))].sort();
+  const uniqueStatuses = ["In Stock", "Low Stock", "Out of Stock"];
 
   const filtered = inventory.filter((item) => {
     if (filter === "low" && item.quantity > item.reorder_point) return false;
     if (filter === "out" && item.quantity > 0) return false;
+    if (productFilter.size > 0 && !productFilter.has(item.product_name)) return false;
+    if (storeFilter.size > 0 && !storeFilter.has(item.store_name)) return false;
+    if (statusFilter.size > 0 && !statusFilter.has(getStatusLabel(item))) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -165,6 +181,85 @@ export default function InventoryPage() {
     if (qty === 0) return { label: "Out of Stock", color: "text-red-600 dark:text-red-400 bg-red-500/10", icon: AlertTriangle };
     if (qty <= reorder) return { label: "Low Stock", color: "text-amber-600 dark:text-amber-400 bg-amber-500/10", icon: AlertTriangle };
     return { label: "In Stock", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10", icon: CheckCircle };
+  }
+
+  function ColumnFilter({ options, selected, onChange, label }: { options: string[]; selected: Set<string>; onChange: (s: Set<string>) => void; label: string }) {
+    const [open, setOpen] = useState(false);
+    const [filterSearch, setFilterSearch] = useState("");
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      function handleClick(e: MouseEvent) {
+        if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      }
+      if (open) document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }, [open]);
+
+    const filteredOptions = options.filter((o) => o.toLowerCase().includes(filterSearch.toLowerCase()));
+
+    function toggle(val: string) {
+      const next = new Set(selected);
+      if (next.has(val)) next.delete(val);
+      else next.add(val);
+      onChange(next);
+    }
+
+    return (
+      <div className="relative inline-block" ref={ref}>
+        <button
+          onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+          className={cn(
+            "ml-1 inline-flex items-center rounded p-0.5 transition-colors",
+            selected.size > 0 ? "text-sky-500" : "opacity-40 hover:opacity-70"
+          )}
+          aria-label={`Filter ${label}`}
+        >
+          <Filter className="h-3 w-3" />
+          {selected.size > 0 && <span className="ml-0.5 text-[10px] font-bold">{selected.size}</span>}
+        </button>
+        {open && (
+          <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border border-white/20 dark:border-gray-700/30 bg-white dark:bg-gray-900 shadow-xl backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="p-2 border-b border-gray-100 dark:border-gray-800">
+              <input
+                type="text"
+                placeholder={`Search ${label}...`}
+                value={filterSearch}
+                onChange={(e) => setFilterSearch(e.target.value)}
+                className="h-7 w-full rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                autoFocus
+              />
+            </div>
+            <div className="max-h-48 overflow-y-auto p-1">
+              {filteredOptions.map((opt) => (
+                <label key={opt} className="flex items-center gap-2 rounded px-2 py-1.5 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(opt)}
+                    onChange={() => toggle(opt)}
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-sky-500 focus:ring-sky-500"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300 truncate">{opt}</span>
+                </label>
+              ))}
+              {filteredOptions.length === 0 && (
+                <p className="px-2 py-2 text-xs text-gray-400">No matches</p>
+              )}
+            </div>
+            {selected.size > 0 && (
+              <div className="border-t border-gray-100 dark:border-gray-800 p-1.5">
+                <button
+                  onClick={() => onChange(new Set())}
+                  className="flex items-center gap-1 rounded px-2 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full"
+                >
+                  <X className="h-3 w-3" /> Clear filter
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -253,12 +348,12 @@ export default function InventoryPage() {
             <table className="w-full text-sm" role="table">
               <thead>
                 <tr className="border-b border-white/10 dark:border-gray-700/20">
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("product_name")}>Product<SortIcon column="product_name" /></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("product_name")}>Product<SortIcon column="product_name" /><ColumnFilter options={uniqueProducts} selected={productFilter} onChange={setProductFilter} label="products" /></th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("product_sku")}>SKU<SortIcon column="product_sku" /></th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("store_name")}>Store<SortIcon column="store_name" /></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("store_name")}>Store<SortIcon column="store_name" /><ColumnFilter options={uniqueStores} selected={storeFilter} onChange={setStoreFilter} label="stores" /></th>
                   <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("quantity")}>Qty<SortIcon column="quantity" /></th>
                   <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("reorder_point")}>Reorder Pt<SortIcon column="reorder_point" /></th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("_status")}>Status<SortIcon column="_status" /></th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort("_status")}>Status<SortIcon column="_status" /><ColumnFilter options={uniqueStatuses} selected={statusFilter} onChange={setStatusFilter} label="statuses" /></th>
                   <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
                 </tr>
               </thead>
