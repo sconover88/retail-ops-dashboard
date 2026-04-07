@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, AlertTriangle, Package, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -27,6 +27,14 @@ interface InventoryRow {
 }
 
 export default function InventoryPage() {
+  return (
+    <Suspense fallback={<GlassCard className="h-64 animate-pulse" />}>
+      <InventoryContent />
+    </Suspense>
+  );
+}
+
+function InventoryContent() {
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get("filter") as "all" | "low" | "out" | null;
   const [loading, setLoading] = useState(true);
