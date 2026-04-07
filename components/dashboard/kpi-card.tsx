@@ -9,6 +9,7 @@ interface KpiCardProps {
   changeType?: "positive" | "negative" | "neutral";
   icon: LucideIcon;
   className?: string;
+  onClick?: () => void;
 }
 
 export function KpiCard({
@@ -18,9 +19,10 @@ export function KpiCard({
   changeType = "neutral",
   icon: Icon,
   className,
+  onClick,
 }: KpiCardProps) {
   return (
-    <GlassCard className={cn("p-6", className)}>
+    <GlassCard className={cn("p-6", onClick && "cursor-pointer hover:opacity-80 transition-opacity", className)} onClick={onClick}>
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-gray-500 dark:text-gray-400">

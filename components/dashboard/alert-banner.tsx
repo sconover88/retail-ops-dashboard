@@ -6,6 +6,7 @@ interface AlertBannerProps {
   type: "info" | "warning" | "error";
   message: string;
   onDismiss?: () => void;
+  onClick?: () => void;
   className?: string;
 }
 
@@ -21,7 +22,7 @@ const styleMap = {
   error: "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-300",
 };
 
-export function AlertBanner({ type, message, onDismiss, className }: AlertBannerProps) {
+export function AlertBanner({ type, message, onDismiss, onClick, className }: AlertBannerProps) {
   const Icon = iconMap[type];
 
   return (
@@ -29,9 +30,11 @@ export function AlertBanner({ type, message, onDismiss, className }: AlertBanner
       className={cn(
         "flex items-center gap-3 rounded-xl border px-4 py-3 text-sm backdrop-blur-sm",
         styleMap[type],
+        onClick && "cursor-pointer hover:opacity-80 transition-opacity",
         className
       )}
       role="alert"
+      onClick={onClick}
     >
       <Icon className="h-4 w-4 flex-shrink-0" />
       <span className="flex-1">{message}</span>

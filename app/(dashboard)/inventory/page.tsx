@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, AlertTriangle, Package, CheckCircle, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, Filter, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -26,12 +27,14 @@ interface InventoryRow {
 }
 
 export default function InventoryPage() {
+  const searchParams = useSearchParams();
+  const initialFilter = searchParams.get("filter") as "all" | "low" | "out" | null;
   const [loading, setLoading] = useState(true);
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [inventory, setInventory] = useState<InventoryRow[]>([]);
-  const [filter, setFilter] = useState<"all" | "low" | "out">("all");
+  const [filter, setFilter] = useState<"all" | "low" | "out">(initialFilter ?? "all");
   const [editingItem, setEditingItem] = useState<InventoryRow | null>(null);
   const [editQty, setEditQty] = useState("");
   const [editReorder, setEditReorder] = useState("");

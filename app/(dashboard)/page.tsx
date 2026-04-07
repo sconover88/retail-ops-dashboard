@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DollarSign,
   ShoppingCart,
@@ -34,6 +35,7 @@ interface ChartPoint {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [kpi, setKpi] = useState<KpiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [salesTrend, setSalesTrend] = useState<ChartPoint[]>([]);
@@ -168,6 +170,7 @@ export default function DashboardPage() {
         <AlertBanner
           type="warning"
           message={`${kpi.lowStockCount} product${kpi.lowStockCount > 1 ? "s" : ""} below reorder point across stores.`}
+          onClick={() => router.push("/inventory?filter=low")}
         />
       )}
 
@@ -222,6 +225,7 @@ export default function DashboardPage() {
               change={kpi?.lowStockCount ? `${kpi.lowStockCount} items below reorder point` : "All stocked"}
               changeType={kpi?.lowStockCount ? "negative" : "positive"}
               icon={AlertTriangle}
+              onClick={() => router.push("/inventory?filter=low")}
             />
           </>
         )}
